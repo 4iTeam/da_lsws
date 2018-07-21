@@ -1,0 +1,154 @@
+#!/bin/sh
+
+# resolve links - $0 may be a softlink
+PROG="$0"
+PIDFILE=/var/run/dalsws.pid
+EXECUTABLE="dalsws d"
+DESC="dalsws"
+BASE_DIR=`dirname "$PROG"`
+cd "$BASE_DIR"
+BASE_DIR=`pwd`
+
+SYS_NAME=`uname -s`
+if [ "x$SYS_NAME" = "xFreeBSD" ] || [ "x$SYS_NAME" = "xDarwin" ] ; then
+    PS_CMD="ps -ax"
+else
+    PS_CMD="ps -ef"
+fi
+printenv >> a.txt
+echo $1 >> a.txt
+test_running()
+{
+RUNNING=0
+if [ -f $PIDFILE ] ; then
+    FPID=`cat $PIDFILE`
+    if [ "x$FPID" != "x" ]; then
+        kill -0 $FPID 2>/dev/null
+        if [ $? -eq 0 ] ; then
+            RUNNING=1
+            PID=$FPID
+        fi
+    fi
+fi
+}
+
+ret=0
+
+
+killservice()
+{
+        `$PS_CMD | grep dalsws | grep -v grep | awk '{print $2}' | xargs -r kill -9`
+#        if [ $WATCH_PROCS -gt 0 ]; then
+#                killall wswatch.sh
+#        fi
+}
+
+start()
+{
+    if [ -f "$PIDFILE" ]; then
+        PID=`cat $PIDFILE`
+    else
+        PID=""
+    fi
+
+    ./$EXECUTABLE
+    ret=$?
+
+    if [ $ret -eq 0 ]; then
+        NEW_PID=`cat $PIDFILE`
+        if [ "x$NEW_PID" = "x$PID" ] || [ "x$NEW_PID" = "x" ]; then
+            sleep 1
+            NEW_PID=`cat $PIDFILE`
+        fi
+        echo "[OK] $DESC: pid=$NEW_PID."
+        test_running
+    else
+        echo "[ERROR] Failed to start $DESC!"
+    fi
+}
+
+
+stop()
+{
+    kill $PID
+    ret=$?
+    if  [ $ret -eq 0 ]; then
+#    if [ -f $PIDFILE ]; then
+#        sleep 1
+#    fi
+        echo "[OK] $DESC: stopped."
+    else
+        echo "[ERROR] can not kill $DESC"
+    fi
+}
+
+restart(){
+    if [ $RUNNING -eq 1 ]; then
+        stop;
+        start;
+        sleep 2;
+        test_running;
+    else
+        start
+        sleep 2
+        test_running
+    fi
+}
+
+
+
+help() {
+    echo $"Usage: $PROG {start|stop|restart|reload|status|help}"
+    cat <<EOF
+
+start       - start web server
+stop        - stop web server
+restart     - gracefully restart web server with zero down time
+reload      - same as restart
+delay-stop  - stop web server after 2 seconds timeout
+condrestart - gracefully restart web server if server is running
+try-restart - same as condrestart
+status      - show service status
+help        - this screen
+
+EOF
+}
+
+test_running
+
+
+case "$1" in 
+    start|restart)
+        restart
+        ;;
+
+    status)
+        if [ $RUNNING -eq 1 ]; then
+            echo "$DESC is running with PID $PID."
+        else
+            echo "[ERROR] $DESC is not running."
+            ret=3
+        fi
+        ;;
+    stop)
+        if [ $RUNNING -eq 0 ]; then
+            sleep 1
+            test_running
+        fi
+        if [ $RUNNING -eq 1 ]; then
+            stop
+        else
+            echo "[ERROR] $DESC is not running."
+            ret=1
+        fi
+        ;;
+    kill)
+        killservice
+        ;;
+    *)
+        help
+        ret=3
+        ;;
+esac
+exit $ret
+

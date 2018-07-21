@@ -1,0 +1,22 @@
+# should be added as /usr/lib/systemd/system/dalsws.service
+[Unit]
+Description=DA OpenLiteSpeed
+After=network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=simple
+PIDFile=/var/run/dalswsd.pid
+ExecStart=/usr/local/da_lsws/bin/dalswsctrl start
+ExecReload=/usr/local/da_lsws/bin/dalswsctrl restart
+ExecStop=/usr/local/da_lsws/bin/dalswsctrl stop
+
+KillMode=none
+PrivateTmp=false
+
+# do not want to be limited in anyway
+CPUAccounting=false
+TasksAccounting=false
+MemoryAccounting=false
+
+[Install]
+WantedBy=multi-user.target
