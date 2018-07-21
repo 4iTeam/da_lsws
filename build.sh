@@ -43,7 +43,7 @@ echo "All file deployed! Build config...";
 
 
 echo "Build listener";
-./scripts/build-listeners.pl
+/usr/local/da_lsws/bin/dalsws build
 
 echo "Restarting service...";
 service litespeed stop
