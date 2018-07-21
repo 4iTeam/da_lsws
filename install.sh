@@ -26,6 +26,7 @@ fi
 
 
 echo "Installed";
+chmod +x ./build.sh
 ./build.sh;
 
 DA_LS_SERVICE=/etc/systemd/system/dalsws.service
